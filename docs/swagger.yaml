@@ -1,0 +1,408 @@
+basePath: /api/v1
+definitions:
+  internal_modules_survivalmap.Category:
+    enum:
+    - food
+    - repair
+    - cafe
+    - wc
+    - gas
+    - rest
+    - other
+    type: string
+    x-enum-comments:
+      CatCafe: Cà phê võng, nước mía
+      CatFood: Quán ăn, cơm bụi
+      CatGas: Đổ xăng
+      CatRepair: Sửa xe, vá vỏ
+      CatRest: Chỗ nghỉ, ghế đá, bóng mát
+      CatWC: Nhà vệ sinh công cộng
+    x-enum-descriptions:
+    - Quán ăn, cơm bụi
+    - Sửa xe, vá vỏ
+    - Cà phê võng, nước mía
+    - Nhà vệ sinh công cộng
+    - Đổ xăng
+    - Chỗ nghỉ, ghế đá, bóng mát
+    - ""
+    x-enum-varnames:
+    - CatFood
+    - CatRepair
+    - CatCafe
+    - CatWC
+    - CatGas
+    - CatRest
+    - CatOther
+  internal_modules_survivalmap.CreatePOIRequest:
+    properties:
+      address:
+        type: string
+      category:
+        $ref: '#/definitions/internal_modules_survivalmap.Category'
+      description:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+    type: object
+  internal_modules_survivalmap.POI:
+    properties:
+      address:
+        type: string
+      category:
+        $ref: '#/definitions/internal_modules_survivalmap.Category'
+      created_at:
+        type: string
+      created_by:
+        description: userID của tài xế đóng góp
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      updated_at:
+        type: string
+      upvote_count:
+        type: integer
+    type: object
+  internal_modules_survivalmap.POIWithDistance:
+    properties:
+      address:
+        type: string
+      category:
+        $ref: '#/definitions/internal_modules_survivalmap.Category'
+      created_at:
+        type: string
+      created_by:
+        description: userID của tài xế đóng góp
+        type: integer
+      description:
+        type: string
+      distance_m:
+        type: number
+      id:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      updated_at:
+        type: string
+      upvote_count:
+        type: integer
+    type: object
+  internal_modules_user.LoginRequest:
+    properties:
+      password:
+        type: string
+      phone:
+        type: string
+    type: object
+  internal_modules_user.LoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/internal_modules_user.UserPublic'
+    type: object
+  internal_modules_user.RegisterRequest:
+    properties:
+      full_name:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+    type: object
+  internal_modules_user.UpdateLocationRequest:
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+    type: object
+  internal_modules_user.UserPublic:
+    properties:
+      full_name:
+        type: string
+      id:
+        type: integer
+      phone:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: |-
+    Backend API cho Superapp dành cho Tài xế công nghệ.
+    Bao gồm: Auth, GPS Tracking, SOS Báo biến, Map Sinh tồn.
+  title: Grab Driver Superapp API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Xác thực bằng SĐT + mật khẩu, trả về JWT token
+      parameters:
+      - description: Thông tin đăng nhập
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_user.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_modules_user.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Đăng nhập
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Tạo tài khoản mới bằng số điện thoại và mật khẩu
+      parameters:
+      - description: Thông tin đăng ký
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_user.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Đăng ký tài khoản tài xế
+      tags:
+      - Auth
+  /drivers/location:
+    post:
+      consumes:
+      - application/json
+      description: Mobile bắn tọa độ GPS lên mỗi vài giây, lưu vào Redis Geo
+      parameters:
+      - description: Tọa độ GPS
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_user.UpdateLocationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cập nhật vị trí GPS
+      tags:
+      - Driver
+  /map/pois:
+    post:
+      consumes:
+      - application/json
+      description: Tài xế đóng góp một điểm POI (quán ăn, sửa xe, cà phê...) lên bản
+        đồ sinh tồn
+      parameters:
+      - description: Thông tin POI
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_survivalmap.CreatePOIRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_modules_survivalmap.POI'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tạo POI mới
+      tags:
+      - Map
+  /map/pois/{id}:
+    get:
+      description: Lấy thông tin chi tiết một điểm POI theo ID
+      parameters:
+      - description: POI ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_modules_survivalmap.POI'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Xem chi tiết POI
+      tags:
+      - Map
+  /map/pois/{id}/upvote:
+    post:
+      description: Tài xế upvote một POI hữu ích
+      parameters:
+      - description: POI ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upvote POI
+      tags:
+      - Map
+  /map/pois/nearby:
+    get:
+      description: Truy vấn các điểm POI trong bán kính xung quanh vị trí tài xế (PostGIS)
+      parameters:
+      - description: Vĩ độ tài xế
+        in: query
+        name: lat
+        required: true
+        type: number
+      - description: Kinh độ tài xế
+        in: query
+        name: lng
+        required: true
+        type: number
+      - description: Bán kính km (mặc định 3)
+        in: query
+        name: radius_km
+        type: number
+      - description: 'Lọc loại: food, repair, cafe, wc, gas, rest, other'
+        in: query
+        name: category
+        type: string
+      - description: Số kết quả (mặc định 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset phân trang
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_modules_survivalmap.POIWithDistance'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tìm POI xung quanh
+      tags:
+      - Map
+  /sos/ws:
+    get:
+      description: Upgrade lên WebSocket. Sau khi kết nối, gửi {"type":"sos"} để broadcast
+        báo biến cho tài xế trong 5km, {"type":"sos_cancel"} để hủy.
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: WebSocket SOS (Báo biến)
+      tags:
+      - SOS
+securityDefinitions:
+  BearerAuth:
+    description: 'Nhập JWT token theo format: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
