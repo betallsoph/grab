@@ -6,6 +6,11 @@ import (
 
 	"grab/internal/core/config"
 	"grab/internal/core/db"
+	"grab/internal/modules/chat"
+	"grab/internal/modules/earning"
+	"grab/internal/modules/emergency"
+	"grab/internal/modules/mood"
+	"grab/internal/modules/reminder"
 	"grab/internal/modules/sos"
 	"grab/internal/modules/survivalmap"
 	"grab/internal/modules/user"
@@ -18,7 +23,7 @@ import (
 // @title           Grab Driver Superapp API
 // @version         1.0
 // @description     Backend API cho Superapp dành cho Tài xế công nghệ.
-// @description     Bao gồm: Auth, GPS Tracking, SOS Báo biến, Map Sinh tồn.
+// @description     Bao gồm: Auth, GPS Tracking, SOS, Chat, Map Sinh tồn, Mood, Earning, Reminder, Emergency Contact.
 
 // @host            localhost:8080
 // @BasePath        /api/v1
@@ -33,11 +38,16 @@ func main() {
 
 	pg := db.NewPostgres(cfg.PostgresDSN)
 	rdb := db.NewRedis(cfg.RedisAddr, cfg.RedisPass)
-	_ = db.NewMongo(cfg.MongoURI)
+	mongoClient := db.NewMongo(cfg.MongoURI)
 
-	// Auto-migrate
-	pg.AutoMigrate(&user.User{})                                                  //nolint:errcheck
-	survivalmap.NewRepository(pg).Migrate()                                        //nolint:errcheck
+	// Auto-migrate PostgreSQL tables
+	pg.AutoMigrate(
+		&user.User{},
+		&earning.Trip{},
+		&reminder.ReminderConfig{},
+		&emergency.EmergencyContact{},
+	) //nolint:errcheck
+	survivalmap.NewRepository(pg).Migrate() //nolint:errcheck
 
 	mux := http.NewServeMux()
 
@@ -45,6 +55,11 @@ func main() {
 	userHandler := user.RegisterRoutes(mux, pg, rdb, cfg.JWTSecret)
 	sos.RegisterRoutes(mux, pg, rdb, userHandler)
 	survivalmap.RegisterRoutes(mux, pg, userHandler)
+	chat.RegisterRoutes(mux, mongoClient, userHandler)
+	mood.RegisterRoutes(mux, pg, mongoClient, userHandler)
+	earning.RegisterRoutes(mux, pg, userHandler)
+	reminder.RegisterRoutes(mux, pg, rdb, userHandler)
+	emergency.RegisterRoutes(mux, pg, userHandler)
 
 	// --- Swagger UI ---
 	mux.Handle("GET /swagger/", httpSwagger.WrapHandler)

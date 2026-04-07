@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Backend API cho Superapp dành cho Tài xế công nghệ.\nBao gồm: Auth, GPS Tracking, SOS Báo biến, Map Sinh tồn.",
+        "description": "Backend API cho Superapp dành cho Tài xế công nghệ.\nBao gồm: Auth, GPS Tracking, SOS, Chat, Map Sinh tồn, Mood, Earning, Reminder, Emergency Contact.",
         "title": "Grab Driver Superapp API",
         "contact": {},
         "version": "1.0"
@@ -98,6 +98,211 @@
                 }
             }
         },
+        "/chat/conversations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy danh sách conversation mà tài xế tham gia, mới nhất trước",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Danh sách conversation",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Số kết quả (mặc định 30)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset phân trang",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_modules_chat.Conversation"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tạo chat 1-1 (direct) hoặc nhóm (group). Direct giữa 2 người nếu đã tồn tại sẽ trả lại cái cũ.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Tạo conversation",
+                "parameters": [
+                    {
+                        "description": "Thông tin conversation",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_chat.CreateConversationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_chat.Conversation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/chat/conversations/{convId}/messages": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy tin nhắn trong conversation, mới nhất trước",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Lịch sử tin nhắn",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation ID",
+                        "name": "convId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Số tin nhắn (mặc định 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset phân trang",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_modules_chat.Message"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Gửi tin nhắn vào conversation qua REST API (backup cho WebSocket)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Gửi tin nhắn (REST)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Conversation ID (ObjectID hex)",
+                        "name": "convId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nội dung tin nhắn",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_chat.SendMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_chat.Message"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/chat/ws": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upgrade lên WebSocket cho real-time chat. Gửi {\"type\":\"send\",\"conversation_id\":\"...\",\"content\":\"hello\"} để chat, {\"type\":\"typing\",\"conversation_id\":\"...\"} để báo đang gõ.",
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "WebSocket Chat",
+                "responses": {}
+            }
+        },
         "/drivers/location": {
             "post": {
                 "security": [
@@ -148,6 +353,286 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/earning/summary/daily": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tổng thu, tổng chi, lãi ròng trong một ngày",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Earning"
+                ],
+                "summary": "Tổng kết ngày",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ngày YYYY-MM-DD (mặc định hôm nay)",
+                        "name": "date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_earning.DailySummary"
+                        }
+                    }
+                }
+            }
+        },
+        "/earning/summary/monthly": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tổng thu, tổng chi, lãi ròng, trung bình lãi/ngày trong tháng",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Earning"
+                ],
+                "summary": "Tổng kết tháng",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tháng YYYY-MM (mặc định tháng này)",
+                        "name": "month",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_earning.MonthlySummary"
+                        }
+                    }
+                }
+            }
+        },
+        "/earning/trips": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy danh sách cuốc xe, lọc theo ngày nếu cần",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Earning"
+                ],
+                "summary": "Danh sách cuốc xe",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Lọc theo ngày YYYY-MM-DD",
+                        "name": "date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Số kết quả (mặc định 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_modules_earning.Trip"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tài xế nhập cuốc xe mới với tổng thu, phí nền tảng, xăng, chi phí khác. Hệ thống tự tính lãi ròng.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Earning"
+                ],
+                "summary": "Ghi nhận cuốc xe",
+                "parameters": [
+                    {
+                        "description": "Thông tin cuốc xe",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_earning.AddTripRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_earning.Trip"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/emergency/contacts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy danh sách anh em thân thiết",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Emergency"
+                ],
+                "summary": "Danh sách liên hệ khẩn cấp",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_modules_emergency.EmergencyContact"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Thêm anh em thân thiết vào danh sách liên hệ khẩn cấp (tối đa 10)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Emergency"
+                ],
+                "summary": "Thêm liên hệ khẩn cấp",
+                "parameters": [
+                    {
+                        "description": "Thông tin liên hệ",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_emergency.AddContactRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_emergency.EmergencyContact"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/emergency/contacts/{contactId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Xóa anh em khỏi danh sách liên hệ khẩn cấp",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Emergency"
+                ],
+                "summary": "Xóa liên hệ khẩn cấp",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID của liên hệ cần xóa",
+                        "name": "contactId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -381,6 +866,338 @@
                 }
             }
         },
+        "/mood/posts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy danh sách bài viết xả mood, mới nhất trước",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mood"
+                ],
+                "summary": "Feed bài viết",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Số bài (mặc định 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset phân trang",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_modules_mood.Post"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tài xế viết tâm trạng lên bảng tin, có thể ẩn danh",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mood"
+                ],
+                "summary": "Đăng bài xả mood",
+                "parameters": [
+                    {
+                        "description": "Nội dung bài viết",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_mood.CreatePostRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_mood.Post"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mood/posts/{postId}/comments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy comment của bài viết, cũ nhất trước",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mood"
+                ],
+                "summary": "Danh sách comment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post ID",
+                        "name": "postId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Số comment (mặc định 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset phân trang",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_modules_mood.Comment"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Thêm comment vào bài viết, có thể ẩn danh",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mood"
+                ],
+                "summary": "Bình luận bài viết",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post ID",
+                        "name": "postId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nội dung comment",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_mood.CreateCommentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_mood.Comment"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mood/posts/{postId}/like": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Thả like cho bài viết",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mood"
+                ],
+                "summary": "Like bài viết",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Post ID",
+                        "name": "postId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reminder/check": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mobile gọi để kiểm tra đã đến lúc nhắc nước/vận động chưa. Nếu key Redis hết TTL → nhắc + reset timer.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reminder"
+                ],
+                "summary": "Kiểm tra trạng thái nhắc nhở",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_reminder.ReminderStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/reminder/config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy cấu hình nhắc uống nước, vận động. Tạo mặc định nếu chưa có.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reminder"
+                ],
+                "summary": "Lấy cấu hình nhắc nhở",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_reminder.ReminderConfig"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bật/tắt nhắc nước, vận động, thay đổi interval, giờ yên tĩnh",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reminder"
+                ],
+                "summary": "Cập nhật cấu hình nhắc nhở",
+                "parameters": [
+                    {
+                        "description": "Cấu hình mới",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_reminder.UpdateConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_reminder.ReminderConfig"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/sos/ws": {
             "get": {
                 "security": [
@@ -398,6 +1215,423 @@
         }
     },
     "definitions": {
+        "internal_modules_chat.Conversation": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "description": "tên nhóm, rỗng nếu direct",
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "type": {
+                    "$ref": "#/definitions/internal_modules_chat.ConversationType"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_modules_chat.ConversationType": {
+            "type": "string",
+            "enum": [
+                "direct",
+                "group"
+            ],
+            "x-enum-comments": {
+                "ConvDirect": "Chat 1-1",
+                "ConvGroup": "Chat nhóm"
+            },
+            "x-enum-descriptions": [
+                "Chat 1-1",
+                "Chat nhóm"
+            ],
+            "x-enum-varnames": [
+                "ConvDirect",
+                "ConvGroup"
+            ]
+        },
+        "internal_modules_chat.CreateConversationRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "type": {
+                    "$ref": "#/definitions/internal_modules_chat.ConversationType"
+                }
+            }
+        },
+        "internal_modules_chat.Message": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "description": "\"text\", \"image\", \"voice\"",
+                    "type": "string"
+                },
+                "conversation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "sender_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_modules_chat.SendMessageRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "description": "\"text\" nếu rỗng",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_modules_earning.AddTripRequest": {
+            "type": "object",
+            "properties": {
+                "fuel_cost": {
+                    "type": "number"
+                },
+                "gross_amount": {
+                    "type": "number"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "other_cost": {
+                    "type": "number"
+                },
+                "platform_fee": {
+                    "type": "number"
+                },
+                "trip_date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_modules_earning.DailySummary": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "total_fees": {
+                    "type": "number"
+                },
+                "total_fuel": {
+                    "type": "number"
+                },
+                "total_gross": {
+                    "type": "number"
+                },
+                "total_net": {
+                    "type": "number"
+                },
+                "total_other": {
+                    "type": "number"
+                },
+                "trip_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_modules_earning.MonthlySummary": {
+            "type": "object",
+            "properties": {
+                "daily_avg_net": {
+                    "description": "trung bình lãi ròng/ngày",
+                    "type": "number"
+                },
+                "month": {
+                    "description": "YYYY-MM",
+                    "type": "string"
+                },
+                "total_fees": {
+                    "type": "number"
+                },
+                "total_fuel": {
+                    "type": "number"
+                },
+                "total_gross": {
+                    "type": "number"
+                },
+                "total_net": {
+                    "type": "number"
+                },
+                "total_other": {
+                    "type": "number"
+                },
+                "trip_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_modules_earning.Trip": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "driver_id": {
+                    "type": "integer"
+                },
+                "fuel_cost": {
+                    "description": "xăng",
+                    "type": "number"
+                },
+                "gross_amount": {
+                    "description": "tổng thu",
+                    "type": "number"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "net_amount": {
+                    "description": "lãi ròng = gross - fees - costs",
+                    "type": "number"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "other_cost": {
+                    "description": "phí khác (gửi xe, phạt...)",
+                    "type": "number"
+                },
+                "platform_fee": {
+                    "description": "phí nền tảng (%)",
+                    "type": "number"
+                },
+                "trip_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_modules_emergency.AddContactRequest": {
+            "type": "object",
+            "properties": {
+                "alias": {
+                    "type": "string"
+                },
+                "contact_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_modules_emergency.EmergencyContact": {
+            "type": "object",
+            "properties": {
+                "alias": {
+                    "description": "biệt danh",
+                    "type": "string"
+                },
+                "contact_id": {
+                    "description": "userID của anh em",
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "driver_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_modules_mood.Comment": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "integer"
+                },
+                "author_name": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_anonymous": {
+                    "type": "boolean"
+                },
+                "post_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_modules_mood.CreateCommentRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "is_anonymous": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_modules_mood.CreatePostRequest": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "is_anonymous": {
+                    "type": "boolean"
+                },
+                "mood": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_modules_mood.Post": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "integer"
+                },
+                "author_name": {
+                    "description": "hiển thị \"Ẩn danh\" nếu anonymous",
+                    "type": "string"
+                },
+                "comment_count": {
+                    "type": "integer"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_anonymous": {
+                    "type": "boolean"
+                },
+                "like_count": {
+                    "type": "integer"
+                },
+                "mood": {
+                    "description": "happy, sad, angry, tired, funny",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_modules_reminder.ReminderConfig": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "driver_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "quiet_end": {
+                    "type": "string"
+                },
+                "quiet_start": {
+                    "description": "HH:MM — không nhắc ban đêm",
+                    "type": "string"
+                },
+                "stretch_enabled": {
+                    "type": "boolean"
+                },
+                "stretch_interval_min": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "water_enabled": {
+                    "type": "boolean"
+                },
+                "water_interval_min": {
+                    "description": "phút",
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_modules_reminder.ReminderStatus": {
+            "type": "object",
+            "properties": {
+                "driver_id": {
+                    "type": "integer"
+                },
+                "next_stretch_at": {
+                    "type": "integer"
+                },
+                "next_water_at": {
+                    "description": "unix timestamp",
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_modules_reminder.UpdateConfigRequest": {
+            "type": "object",
+            "properties": {
+                "quiet_end": {
+                    "type": "string"
+                },
+                "quiet_start": {
+                    "type": "string"
+                },
+                "stretch_enabled": {
+                    "type": "boolean"
+                },
+                "stretch_interval_min": {
+                    "type": "integer"
+                },
+                "water_enabled": {
+                    "type": "boolean"
+                },
+                "water_interval_min": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_modules_survivalmap.Category": {
             "type": "string",
             "enum": [

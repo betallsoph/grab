@@ -1,5 +1,285 @@
 basePath: /api/v1
 definitions:
+  internal_modules_chat.Conversation:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: integer
+      id:
+        type: string
+      name:
+        description: tên nhóm, rỗng nếu direct
+        type: string
+      participants:
+        items:
+          type: integer
+        type: array
+      type:
+        $ref: '#/definitions/internal_modules_chat.ConversationType'
+      updated_at:
+        type: string
+    type: object
+  internal_modules_chat.ConversationType:
+    enum:
+    - direct
+    - group
+    type: string
+    x-enum-comments:
+      ConvDirect: Chat 1-1
+      ConvGroup: Chat nhóm
+    x-enum-descriptions:
+    - Chat 1-1
+    - Chat nhóm
+    x-enum-varnames:
+    - ConvDirect
+    - ConvGroup
+  internal_modules_chat.CreateConversationRequest:
+    properties:
+      name:
+        type: string
+      participants:
+        items:
+          type: integer
+        type: array
+      type:
+        $ref: '#/definitions/internal_modules_chat.ConversationType'
+    type: object
+  internal_modules_chat.Message:
+    properties:
+      content:
+        type: string
+      content_type:
+        description: '"text", "image", "voice"'
+        type: string
+      conversation_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      sender_id:
+        type: integer
+    type: object
+  internal_modules_chat.SendMessageRequest:
+    properties:
+      content:
+        type: string
+      content_type:
+        description: '"text" nếu rỗng'
+        type: string
+    type: object
+  internal_modules_earning.AddTripRequest:
+    properties:
+      fuel_cost:
+        type: number
+      gross_amount:
+        type: number
+      note:
+        type: string
+      other_cost:
+        type: number
+      platform_fee:
+        type: number
+      trip_date:
+        description: YYYY-MM-DD
+        type: string
+    type: object
+  internal_modules_earning.DailySummary:
+    properties:
+      date:
+        description: YYYY-MM-DD
+        type: string
+      total_fees:
+        type: number
+      total_fuel:
+        type: number
+      total_gross:
+        type: number
+      total_net:
+        type: number
+      total_other:
+        type: number
+      trip_count:
+        type: integer
+    type: object
+  internal_modules_earning.MonthlySummary:
+    properties:
+      daily_avg_net:
+        description: trung bình lãi ròng/ngày
+        type: number
+      month:
+        description: YYYY-MM
+        type: string
+      total_fees:
+        type: number
+      total_fuel:
+        type: number
+      total_gross:
+        type: number
+      total_net:
+        type: number
+      total_other:
+        type: number
+      trip_count:
+        type: integer
+    type: object
+  internal_modules_earning.Trip:
+    properties:
+      created_at:
+        type: string
+      driver_id:
+        type: integer
+      fuel_cost:
+        description: xăng
+        type: number
+      gross_amount:
+        description: tổng thu
+        type: number
+      id:
+        type: integer
+      net_amount:
+        description: lãi ròng = gross - fees - costs
+        type: number
+      note:
+        type: string
+      other_cost:
+        description: phí khác (gửi xe, phạt...)
+        type: number
+      platform_fee:
+        description: phí nền tảng (%)
+        type: number
+      trip_date:
+        type: string
+    type: object
+  internal_modules_emergency.AddContactRequest:
+    properties:
+      alias:
+        type: string
+      contact_id:
+        type: integer
+    type: object
+  internal_modules_emergency.EmergencyContact:
+    properties:
+      alias:
+        description: biệt danh
+        type: string
+      contact_id:
+        description: userID của anh em
+        type: integer
+      created_at:
+        type: string
+      driver_id:
+        type: integer
+      id:
+        type: integer
+    type: object
+  internal_modules_mood.Comment:
+    properties:
+      author_id:
+        type: integer
+      author_name:
+        type: string
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_anonymous:
+        type: boolean
+      post_id:
+        type: string
+    type: object
+  internal_modules_mood.CreateCommentRequest:
+    properties:
+      content:
+        type: string
+      is_anonymous:
+        type: boolean
+    type: object
+  internal_modules_mood.CreatePostRequest:
+    properties:
+      content:
+        type: string
+      is_anonymous:
+        type: boolean
+      mood:
+        type: string
+    type: object
+  internal_modules_mood.Post:
+    properties:
+      author_id:
+        type: integer
+      author_name:
+        description: hiển thị "Ẩn danh" nếu anonymous
+        type: string
+      comment_count:
+        type: integer
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_anonymous:
+        type: boolean
+      like_count:
+        type: integer
+      mood:
+        description: happy, sad, angry, tired, funny
+        type: string
+    type: object
+  internal_modules_reminder.ReminderConfig:
+    properties:
+      created_at:
+        type: string
+      driver_id:
+        type: integer
+      id:
+        type: integer
+      quiet_end:
+        type: string
+      quiet_start:
+        description: HH:MM — không nhắc ban đêm
+        type: string
+      stretch_enabled:
+        type: boolean
+      stretch_interval_min:
+        type: integer
+      updated_at:
+        type: string
+      water_enabled:
+        type: boolean
+      water_interval_min:
+        description: phút
+        type: integer
+    type: object
+  internal_modules_reminder.ReminderStatus:
+    properties:
+      driver_id:
+        type: integer
+      next_stretch_at:
+        type: integer
+      next_water_at:
+        description: unix timestamp
+        type: integer
+    type: object
+  internal_modules_reminder.UpdateConfigRequest:
+    properties:
+      quiet_end:
+        type: string
+      quiet_start:
+        type: string
+      stretch_enabled:
+        type: boolean
+      stretch_interval_min:
+        type: integer
+      water_enabled:
+        type: boolean
+      water_interval_min:
+        type: integer
+    type: object
   internal_modules_survivalmap.Category:
     enum:
     - food
@@ -146,7 +426,7 @@ info:
   contact: {}
   description: |-
     Backend API cho Superapp dành cho Tài xế công nghệ.
-    Bao gồm: Auth, GPS Tracking, SOS Báo biến, Map Sinh tồn.
+    Bao gồm: Auth, GPS Tracking, SOS, Chat, Map Sinh tồn, Mood, Earning, Reminder, Emergency Contact.
   title: Grab Driver Superapp API
   version: "1.0"
 paths:
@@ -208,6 +488,137 @@ paths:
       summary: Đăng ký tài khoản tài xế
       tags:
       - Auth
+  /chat/conversations:
+    get:
+      description: Lấy danh sách conversation mà tài xế tham gia, mới nhất trước
+      parameters:
+      - description: Số kết quả (mặc định 30)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset phân trang
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_modules_chat.Conversation'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách conversation
+      tags:
+      - Chat
+    post:
+      consumes:
+      - application/json
+      description: Tạo chat 1-1 (direct) hoặc nhóm (group). Direct giữa 2 người nếu
+        đã tồn tại sẽ trả lại cái cũ.
+      parameters:
+      - description: Thông tin conversation
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_chat.CreateConversationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_modules_chat.Conversation'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tạo conversation
+      tags:
+      - Chat
+  /chat/conversations/{convId}/messages:
+    get:
+      description: Lấy tin nhắn trong conversation, mới nhất trước
+      parameters:
+      - description: Conversation ID
+        in: path
+        name: convId
+        required: true
+        type: string
+      - description: Số tin nhắn (mặc định 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset phân trang
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_modules_chat.Message'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lịch sử tin nhắn
+      tags:
+      - Chat
+    post:
+      consumes:
+      - application/json
+      description: Gửi tin nhắn vào conversation qua REST API (backup cho WebSocket)
+      parameters:
+      - description: Conversation ID (ObjectID hex)
+        in: path
+        name: convId
+        required: true
+        type: string
+      - description: Nội dung tin nhắn
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_chat.SendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_modules_chat.Message'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Gửi tin nhắn (REST)
+      tags:
+      - Chat
+  /chat/ws:
+    get:
+      description: Upgrade lên WebSocket cho real-time chat. Gửi {"type":"send","conversation_id":"...","content":"hello"}
+        để chat, {"type":"typing","conversation_id":"..."} để báo đang gõ.
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: WebSocket Chat
+      tags:
+      - Chat
   /drivers/location:
     post:
       consumes:
@@ -246,6 +657,181 @@ paths:
       summary: Cập nhật vị trí GPS
       tags:
       - Driver
+  /earning/summary/daily:
+    get:
+      description: Tổng thu, tổng chi, lãi ròng trong một ngày
+      parameters:
+      - description: Ngày YYYY-MM-DD (mặc định hôm nay)
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_modules_earning.DailySummary'
+      security:
+      - BearerAuth: []
+      summary: Tổng kết ngày
+      tags:
+      - Earning
+  /earning/summary/monthly:
+    get:
+      description: Tổng thu, tổng chi, lãi ròng, trung bình lãi/ngày trong tháng
+      parameters:
+      - description: Tháng YYYY-MM (mặc định tháng này)
+        in: query
+        name: month
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_modules_earning.MonthlySummary'
+      security:
+      - BearerAuth: []
+      summary: Tổng kết tháng
+      tags:
+      - Earning
+  /earning/trips:
+    get:
+      description: Lấy danh sách cuốc xe, lọc theo ngày nếu cần
+      parameters:
+      - description: Lọc theo ngày YYYY-MM-DD
+        in: query
+        name: date
+        type: string
+      - description: Số kết quả (mặc định 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_modules_earning.Trip'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách cuốc xe
+      tags:
+      - Earning
+    post:
+      consumes:
+      - application/json
+      description: Tài xế nhập cuốc xe mới với tổng thu, phí nền tảng, xăng, chi phí
+        khác. Hệ thống tự tính lãi ròng.
+      parameters:
+      - description: Thông tin cuốc xe
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_earning.AddTripRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_modules_earning.Trip'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Ghi nhận cuốc xe
+      tags:
+      - Earning
+  /emergency/contacts:
+    get:
+      description: Lấy danh sách anh em thân thiết
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_modules_emergency.EmergencyContact'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách liên hệ khẩn cấp
+      tags:
+      - Emergency
+    post:
+      consumes:
+      - application/json
+      description: Thêm anh em thân thiết vào danh sách liên hệ khẩn cấp (tối đa 10)
+      parameters:
+      - description: Thông tin liên hệ
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_emergency.AddContactRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_modules_emergency.EmergencyContact'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Thêm liên hệ khẩn cấp
+      tags:
+      - Emergency
+  /emergency/contacts/{contactId}:
+    delete:
+      description: Xóa anh em khỏi danh sách liên hệ khẩn cấp
+      parameters:
+      - description: User ID của liên hệ cần xóa
+        in: path
+        name: contactId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Xóa liên hệ khẩn cấp
+      tags:
+      - Emergency
   /map/pois:
     post:
       consumes:
@@ -389,6 +975,215 @@ paths:
       summary: Tìm POI xung quanh
       tags:
       - Map
+  /mood/posts:
+    get:
+      description: Lấy danh sách bài viết xả mood, mới nhất trước
+      parameters:
+      - description: Số bài (mặc định 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset phân trang
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_modules_mood.Post'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Feed bài viết
+      tags:
+      - Mood
+    post:
+      consumes:
+      - application/json
+      description: Tài xế viết tâm trạng lên bảng tin, có thể ẩn danh
+      parameters:
+      - description: Nội dung bài viết
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_mood.CreatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_modules_mood.Post'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Đăng bài xả mood
+      tags:
+      - Mood
+  /mood/posts/{postId}/comments:
+    get:
+      description: Lấy comment của bài viết, cũ nhất trước
+      parameters:
+      - description: Post ID
+        in: path
+        name: postId
+        required: true
+        type: string
+      - description: Số comment (mặc định 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset phân trang
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_modules_mood.Comment'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Danh sách comment
+      tags:
+      - Mood
+    post:
+      consumes:
+      - application/json
+      description: Thêm comment vào bài viết, có thể ẩn danh
+      parameters:
+      - description: Post ID
+        in: path
+        name: postId
+        required: true
+        type: string
+      - description: Nội dung comment
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_mood.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_modules_mood.Comment'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Bình luận bài viết
+      tags:
+      - Mood
+  /mood/posts/{postId}/like:
+    post:
+      description: Thả like cho bài viết
+      parameters:
+      - description: Post ID
+        in: path
+        name: postId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Like bài viết
+      tags:
+      - Mood
+  /reminder/check:
+    get:
+      description: Mobile gọi để kiểm tra đã đến lúc nhắc nước/vận động chưa. Nếu
+        key Redis hết TTL → nhắc + reset timer.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_modules_reminder.ReminderStatus'
+      security:
+      - BearerAuth: []
+      summary: Kiểm tra trạng thái nhắc nhở
+      tags:
+      - Reminder
+  /reminder/config:
+    get:
+      description: Lấy cấu hình nhắc uống nước, vận động. Tạo mặc định nếu chưa có.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_modules_reminder.ReminderConfig'
+      security:
+      - BearerAuth: []
+      summary: Lấy cấu hình nhắc nhở
+      tags:
+      - Reminder
+    put:
+      consumes:
+      - application/json
+      description: Bật/tắt nhắc nước, vận động, thay đổi interval, giờ yên tĩnh
+      parameters:
+      - description: Cấu hình mới
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_reminder.UpdateConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_modules_reminder.ReminderConfig'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cập nhật cấu hình nhắc nhở
+      tags:
+      - Reminder
   /sos/ws:
     get:
       description: Upgrade lên WebSocket. Sau khi kết nối, gửi {"type":"sos"} để broadcast

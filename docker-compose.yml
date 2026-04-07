@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  # 1. Postgres có tích hợp sẵn PostGIS (Dành cho Map Sinh Tồn)
+  postgres:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_USER: driver_admin
+      POSTGRES_PASSWORD: super_secret_password
+      POSTGRES_DB: driver_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # 2. MongoDB (Dành cho Chat và Góc xả stress)
+  mongo:
+    image: mongo:6.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo_admin
+      MONGO_INITDB_ROOT_PASSWORD: super_secret_password
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  # 3. Redis (Cache & Realtime)
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:
+  mongodata:
