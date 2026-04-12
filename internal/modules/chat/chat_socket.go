@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // --- Client ---
@@ -172,8 +171,7 @@ func (h *Hub) handleSend(sender *Client, incoming WSIncoming) {
 	}
 
 	// Lấy danh sách participant để broadcast
-	convID, _ := bson.ObjectIDFromHex(incoming.ConversationID)
-	conv, err := h.service.repo.FindConversationByID(ctx, convID)
+	conv, err := h.service.GetConversation(ctx, sender.userID, incoming.ConversationID)
 	if err != nil {
 		return
 	}
@@ -209,7 +207,11 @@ func (h *Hub) handleTyping(sender *Client, incoming WSIncoming) {
 		SenderID:       sender.userID,
 		Timestamp:      time.Now().Unix(),
 	}
-	data, _ := json.Marshal(outgoing)
+	data, err := json.Marshal(outgoing)
+	if err != nil {
+		log.Printf("[Chat] handleTyping user=%d marshal err=%v", sender.userID, err)
+		return
+	}
 
 	// Gửi cho tất cả participant trừ sender
 	h.mu.RLock()

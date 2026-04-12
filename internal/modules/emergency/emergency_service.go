@@ -29,9 +29,11 @@ func (s *Service) AddContact(ctx context.Context, driverID uint, req AddContactR
 
 	// Kiểm tra giới hạn
 	var count int64
-	s.db.WithContext(ctx).Model(&EmergencyContact{}).
+	if err := s.db.WithContext(ctx).Model(&EmergencyContact{}).
 		Where("driver_id = ?", driverID).
-		Count(&count)
+		Count(&count).Error; err != nil {
+		return nil, fmt.Errorf("emergency.AddContact count: %w", err)
+	}
 	if count >= maxContacts {
 		return nil, fmt.Errorf("maximum %d emergency contacts reached", maxContacts)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"grab/internal/core/httputil"
 	"grab/internal/modules/user"
 )
 
@@ -13,16 +14,6 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
-}
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data) //nolint:errcheck
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
 }
 
 // GetConfig godoc
@@ -36,15 +27,15 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 func (h *Handler) GetConfig(w http.ResponseWriter, r *http.Request) {
 	uid, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	cfg, err := h.service.GetOrCreateConfig(r.Context(), uid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, cfg)
+	httputil.WriteJSON(w, http.StatusOK, cfg)
 }
 
 // UpdateConfig godoc
@@ -61,22 +52,23 @@ func (h *Handler) GetConfig(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	uid, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	httputil.LimitBody(r)
 	var req UpdateConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	cfg, err := h.service.UpdateConfig(r.Context(), uid, req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, cfg)
+	httputil.WriteJSON(w, http.StatusOK, cfg)
 }
 
 // CheckStatus godoc
@@ -90,13 +82,13 @@ func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CheckStatus(w http.ResponseWriter, r *http.Request) {
 	uid, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	status, err := h.service.CheckAndGetStatus(r.Context(), uid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, status)
+	httputil.WriteJSON(w, http.StatusOK, status)
 }

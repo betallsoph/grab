@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"grab/internal/core/httputil"
 	"grab/internal/modules/user"
 )
 
@@ -14,16 +15,6 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
-}
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data) //nolint:errcheck
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
 }
 
 // CreatePost godoc
@@ -40,23 +31,24 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	uid, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	httputil.LimitBody(r)
 	var req CreatePostRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	post, err := h.service.CreatePost(r.Context(), uid, req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, post)
+	httputil.WriteJSON(w, http.StatusCreated, post)
 }
 
 // ListPosts godoc
@@ -73,16 +65,17 @@ func (h *Handler) ListPosts(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	offset, _ := strconv.Atoi(q.Get("offset"))
+	limit, offset = httputil.ClampPagination(limit, offset, 20, 100)
 
 	posts, err := h.service.ListPosts(r.Context(), limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if posts == nil {
 		posts = []Post{}
 	}
-	writeJSON(w, http.StatusOK, posts)
+	httputil.WriteJSON(w, http.StatusOK, posts)
 }
 
 // LikePost godoc
@@ -99,10 +92,10 @@ func (h *Handler) LikePost(w http.ResponseWriter, r *http.Request) {
 	postID := r.PathValue("postId")
 
 	if err := h.service.LikePost(r.Context(), postID); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"message": "liked"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"message": "liked"})
 }
 
 // CreateComment godoc
@@ -120,24 +113,25 @@ func (h *Handler) LikePost(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	uid, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	postID := r.PathValue("postId")
 
+	httputil.LimitBody(r)
 	var req CreateCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	comment, err := h.service.CreateComment(r.Context(), uid, postID, req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, comment)
+	httputil.WriteJSON(w, http.StatusCreated, comment)
 }
 
 // ListComments godoc
@@ -156,14 +150,15 @@ func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	offset, _ := strconv.Atoi(q.Get("offset"))
+	limit, offset = httputil.ClampPagination(limit, offset, 50, 200)
 
 	comments, err := h.service.ListComments(r.Context(), postID, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if comments == nil {
 		comments = []Comment{}
 	}
-	writeJSON(w, http.StatusOK, comments)
+	httputil.WriteJSON(w, http.StatusOK, comments)
 }

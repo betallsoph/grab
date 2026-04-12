@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"gorm.io/gorm"
 )
 
@@ -78,7 +79,10 @@ func (s *Service) CreateComment(ctx context.Context, userID uint, postIDHex stri
 
 	// Kiểm tra post tồn tại
 	if _, err := s.repo.FindPostByID(ctx, postID); err != nil {
-		return nil, errors.New("post not found")
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("post not found")
+		}
+		return nil, fmt.Errorf("find post: %w", err)
 	}
 
 	authorName := s.getDriverName(ctx, userID)

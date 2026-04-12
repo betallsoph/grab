@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
+	"grab/internal/core/httputil"
 	"grab/internal/modules/user"
 )
 
@@ -14,18 +16,6 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
-}
-
-// --- Helpers ---
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data) //nolint:errcheck
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
 }
 
 // --- Handlers ---
@@ -43,25 +33,26 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 // @Failure      401   {object}  map[string]string
 // @Router       /map/pois [post]
 func (h *Handler) CreatePOI(w http.ResponseWriter, r *http.Request) {
+	httputil.LimitBody(r)
 	userID, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var req CreatePOIRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	poi, err := h.service.CreatePOI(r.Context(), userID, req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, poi)
+	httputil.WriteJSON(w, http.StatusCreated, poi)
 }
 
 // SearchNearby godoc
@@ -84,18 +75,23 @@ func (h *Handler) SearchNearby(w http.ResponseWriter, r *http.Request) {
 
 	lat, err := strconv.ParseFloat(q.Get("lat"), 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "lat is required")
+		httputil.WriteError(w, http.StatusBadRequest, "lat is required")
 		return
 	}
 	lng, err := strconv.ParseFloat(q.Get("lng"), 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "lng is required")
+		httputil.WriteError(w, http.StatusBadRequest, "lng is required")
+		return
+	}
+	if !httputil.ValidCoords(lat, lng) {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid coordinates")
 		return
 	}
 
 	radiusKm, _ := strconv.ParseFloat(q.Get("radius_km"), 64)
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	offset, _ := strconv.Atoi(q.Get("offset"))
+	limit, offset = httputil.ClampPagination(limit, offset, 50, 100)
 
 	results, err := h.service.SearchNearby(r.Context(), NearbyQuery{
 		Latitude:  lat,
@@ -106,11 +102,11 @@ func (h *Handler) SearchNearby(w http.ResponseWriter, r *http.Request) {
 		Offset:    offset,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, results)
+	httputil.WriteJSON(w, http.StatusOK, results)
 }
 
 // GetPOI godoc
@@ -127,17 +123,21 @@ func (h *Handler) GetPOI(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid poi id")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid poi id")
 		return
 	}
 
 	poi, err := h.service.GetPOI(r.Context(), uint(id))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "poi not found")
+		if strings.Contains(err.Error(), "not found") {
+			httputil.WriteError(w, http.StatusNotFound, "poi not found")
+		} else {
+			httputil.WriteError(w, http.StatusInternalServerError, "internal server error")
+		}
 		return
 	}
 
-	writeJSON(w, http.StatusOK, poi)
+	httputil.WriteJSON(w, http.StatusOK, poi)
 }
 
 // UpvotePOI godoc
@@ -154,14 +154,14 @@ func (h *Handler) UpvotePOI(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid poi id")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid poi id")
 		return
 	}
 
 	if err := h.service.UpvotePOI(r.Context(), uint(id)); err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
+		httputil.WriteError(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"message": "upvoted"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"message": "upvoted"})
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"grab/internal/core/httputil"
 	"grab/internal/modules/user"
 )
 
@@ -14,16 +15,6 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
-}
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data) //nolint:errcheck
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
 }
 
 // AddContact godoc
@@ -40,22 +31,23 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 func (h *Handler) AddContact(w http.ResponseWriter, r *http.Request) {
 	uid, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	httputil.LimitBody(r)
 	var req AddContactRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	ec, err := h.service.AddContact(r.Context(), uid, req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, ec)
+	httputil.WriteJSON(w, http.StatusCreated, ec)
 }
 
 // ListContacts godoc
@@ -69,18 +61,18 @@ func (h *Handler) AddContact(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListContacts(w http.ResponseWriter, r *http.Request) {
 	uid, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	contacts, err := h.service.ListContacts(r.Context(), uid)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if contacts == nil {
 		contacts = []EmergencyContact{}
 	}
-	writeJSON(w, http.StatusOK, contacts)
+	httputil.WriteJSON(w, http.StatusOK, contacts)
 }
 
 // RemoveContact godoc
@@ -96,19 +88,19 @@ func (h *Handler) ListContacts(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RemoveContact(w http.ResponseWriter, r *http.Request) {
 	uid, ok := r.Context().Value(user.ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	cid, err := strconv.ParseUint(r.PathValue("contactId"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid contact id")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid contact id")
 		return
 	}
 
 	if err := h.service.RemoveContact(r.Context(), uid, uint(cid)); err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
+		httputil.WriteError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"message": "removed"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"message": "removed"})
 }

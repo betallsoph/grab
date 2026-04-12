@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/websocket"
+	"grab/internal/core/httputil"
 	"grab/internal/modules/user"
 )
 
@@ -23,16 +24,6 @@ type Handler struct {
 
 func NewHandler(service *Service, hub *Hub) *Handler {
 	return &Handler{service: service, hub: hub}
-}
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data) //nolint:errcheck
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
 }
 
 func getUserID(r *http.Request) (uint, bool) {
@@ -54,23 +45,24 @@ func getUserID(r *http.Request) (uint, bool) {
 func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 	uid, ok := getUserID(r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	httputil.LimitBody(r)
 	var req CreateConversationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	conv, err := h.service.CreateConversation(r.Context(), uid, req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, conv)
+	httputil.WriteJSON(w, http.StatusCreated, conv)
 }
 
 // ListConversations godoc
@@ -86,24 +78,25 @@ func (h *Handler) CreateConversation(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListConversations(w http.ResponseWriter, r *http.Request) {
 	uid, ok := getUserID(r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	offset, _ := strconv.Atoi(q.Get("offset"))
+	limit, offset = httputil.ClampPagination(limit, offset, 30, 100)
 
 	convs, err := h.service.ListConversations(r.Context(), uid, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if convs == nil {
 		convs = []Conversation{}
 	}
 
-	writeJSON(w, http.StatusOK, convs)
+	httputil.WriteJSON(w, http.StatusOK, convs)
 }
 
 // SendMessage godoc
@@ -121,25 +114,26 @@ func (h *Handler) ListConversations(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	uid, ok := getUserID(r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	convID := r.PathValue("convId")
 
+	httputil.LimitBody(r)
 	var req SendMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	msg, err := h.service.SendMessage(r.Context(), uid, convID, req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, msg)
+	httputil.WriteJSON(w, http.StatusCreated, msg)
 }
 
 // GetMessages godoc
@@ -156,7 +150,7 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	uid, ok := getUserID(r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -164,17 +158,18 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	offset, _ := strconv.Atoi(q.Get("offset"))
+	limit, offset = httputil.ClampPagination(limit, offset, 50, 200)
 
 	msgs, err := h.service.GetMessages(r.Context(), uid, convID, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if msgs == nil {
 		msgs = []Message{}
 	}
 
-	writeJSON(w, http.StatusOK, msgs)
+	httputil.WriteJSON(w, http.StatusOK, msgs)
 }
 
 // ServeWS godoc

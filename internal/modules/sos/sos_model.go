@@ -1,14 +1,11 @@
 package sos
 
-import "time"
-
 // --- WebSocket message types ---
 
 const (
 	MsgTypeSOS       = "sos"        // Tài xế gửi lên: bật SOS
 	MsgTypeSOSCancel = "sos_cancel" // Tài xế gửi lên: hủy SOS
 	MsgTypeSOSAlert  = "sos_alert"  // Server broadcast xuống các tài xế gần
-	MsgTypePong      = "pong"       // Server trả lại khi nhận ping
 )
 
 // IncomingMessage là cấu trúc JSON mà mobile gửi lên qua WebSocket.
@@ -37,13 +34,4 @@ type NearbyDriver struct {
 	Latitude   float64
 	Longitude  float64
 	DistanceKm float64
-}
-
-// SOSEvent chứa đầy đủ thông tin một sự kiện SOS,
-// được truyền từ Hub sang Service để xử lý.
-type SOSEvent struct {
-	DriverID  uint
-	Latitude  float64
-	Longitude float64
-	Timestamp time.Time
 }

@@ -50,7 +50,11 @@ func (r *Repository) CreatePost(ctx context.Context, p *Post) error {
 	if err != nil {
 		return fmt.Errorf("repo.CreatePost: %w", err)
 	}
-	p.ID = result.InsertedID.(bson.ObjectID)
+	oid, ok := result.InsertedID.(bson.ObjectID)
+	if !ok {
+		return fmt.Errorf("repo.CreatePost: unexpected InsertedID type %T", result.InsertedID)
+	}
+	p.ID = oid
 	return nil
 }
 
@@ -100,7 +104,11 @@ func (r *Repository) CreateComment(ctx context.Context, c *Comment) error {
 	if err != nil {
 		return fmt.Errorf("repo.CreateComment: %w", err)
 	}
-	c.ID = result.InsertedID.(bson.ObjectID)
+	oid, ok := result.InsertedID.(bson.ObjectID)
+	if !ok {
+		return fmt.Errorf("repo.CreateComment: unexpected InsertedID type %T", result.InsertedID)
+	}
+	c.ID = oid
 
 	// Tăng comment_count trên post
 	_, _ = r.posts.UpdateOne(ctx,

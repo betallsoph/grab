@@ -41,6 +41,9 @@ func (s *Service) CreateConversation(ctx context.Context, userID uint, req Creat
 		if len(req.Participants) != 2 {
 			return nil, errors.New("direct conversation requires exactly 2 participants")
 		}
+		if req.Participants[0] == req.Participants[1] {
+			return nil, errors.New("direct conversation requires two different users")
+		}
 		// Kiểm tra đã tồn tại chưa
 		existing, err := s.repo.FindDirectConversation(ctx, req.Participants[0], req.Participants[1])
 		if err == nil {

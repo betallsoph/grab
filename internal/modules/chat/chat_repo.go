@@ -52,7 +52,9 @@ func (r *Repository) CreateConversation(ctx context.Context, conv *Conversation)
 	if err != nil {
 		return fmt.Errorf("repo.CreateConversation: %w", err)
 	}
-	conv.ID = result.InsertedID.(bson.ObjectID)
+	if oid, ok := result.InsertedID.(bson.ObjectID); ok {
+		conv.ID = oid
+	}
 	return nil
 }
 
@@ -109,7 +111,9 @@ func (r *Repository) InsertMessage(ctx context.Context, msg *Message) error {
 	if err != nil {
 		return fmt.Errorf("repo.InsertMessage: %w", err)
 	}
-	msg.ID = result.InsertedID.(bson.ObjectID)
+	if oid, ok := result.InsertedID.(bson.ObjectID); ok {
+		msg.ID = oid
+	}
 
 	// Cập nhật updated_at để sort conversation list
 	_, _ = r.conversations.UpdateOne(ctx,

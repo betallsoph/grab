@@ -19,6 +19,9 @@ func (s *Service) AddTrip(ctx context.Context, driverID uint, req AddTripRequest
 	if req.GrossAmount <= 0 {
 		return nil, errors.New("gross_amount must be positive")
 	}
+	if req.PlatformFee < 0 || req.FuelCost < 0 || req.OtherCost < 0 {
+		return nil, errors.New("platform_fee, fuel_cost, and other_cost must be >= 0")
+	}
 
 	tripDate, err := time.Parse("2006-01-02", req.TripDate)
 	if err != nil {

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
+	"grab/internal/core/httputil"
 	"grab/internal/modules/user"
 )
 
@@ -14,16 +16,6 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
-}
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data) //nolint:errcheck
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
 }
 
 func getUserID(r *http.Request) (uint, bool) {
@@ -45,22 +37,28 @@ func getUserID(r *http.Request) (uint, bool) {
 func (h *Handler) AddTrip(w http.ResponseWriter, r *http.Request) {
 	uid, ok := getUserID(r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	httputil.LimitBody(r)
 	var req AddTripRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	trip, err := h.service.AddTrip(r.Context(), uid, req)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		msg := err.Error()
+		if strings.Contains(msg, "must be") || strings.Contains(msg, "format") {
+			httputil.WriteError(w, http.StatusBadRequest, msg)
+		} else {
+			httputil.WriteError(w, http.StatusInternalServerError, msg)
+		}
 		return
 	}
-	writeJSON(w, http.StatusCreated, trip)
+	httputil.WriteJSON(w, http.StatusCreated, trip)
 }
 
 // ListTrips godoc
@@ -77,23 +75,24 @@ func (h *Handler) AddTrip(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListTrips(w http.ResponseWriter, r *http.Request) {
 	uid, ok := getUserID(r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	offset, _ := strconv.Atoi(q.Get("offset"))
+	limit, offset = httputil.ClampPagination(limit, offset, 50, 200)
 
 	trips, err := h.service.ListTrips(r.Context(), uid, q.Get("date"), limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if trips == nil {
 		trips = []Trip{}
 	}
-	writeJSON(w, http.StatusOK, trips)
+	httputil.WriteJSON(w, http.StatusOK, trips)
 }
 
 // DailySummary godoc
@@ -108,16 +107,16 @@ func (h *Handler) ListTrips(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DailySummary(w http.ResponseWriter, r *http.Request) {
 	uid, ok := getUserID(r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	summary, err := h.service.DailySummary(r.Context(), uid, r.URL.Query().Get("date"))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, summary)
+	httputil.WriteJSON(w, http.StatusOK, summary)
 }
 
 // MonthlySummary godoc
@@ -132,14 +131,14 @@ func (h *Handler) DailySummary(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) MonthlySummary(w http.ResponseWriter, r *http.Request) {
 	uid, ok := getUserID(r)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	summary, err := h.service.MonthlySummary(r.Context(), uid, r.URL.Query().Get("month"))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, summary)
+	httputil.WriteJSON(w, http.StatusOK, summary)
 }

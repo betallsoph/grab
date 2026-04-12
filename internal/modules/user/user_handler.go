@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"grab/internal/core/httputil"
 )
 
 // Handler nhận HTTP request, parse dữ liệu rồi ủy quyền cho Service xử lý.
@@ -14,18 +16,6 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
-}
-
-// --- Helpers ---
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data) //nolint:errcheck
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
 }
 
 // --- Handlers ---
@@ -41,18 +31,25 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 // @Failure      400   {object}  map[string]string
 // @Router       /auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	httputil.LimitBody(r)
+
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.service.Register(r.Context(), req); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		msg := err.Error()
+		if strings.HasPrefix(msg, "phone and password are required") {
+			httputil.WriteError(w, http.StatusBadRequest, msg)
+			return
+		}
+		httputil.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, map[string]string{"message": "registered successfully"})
+	httputil.WriteJSON(w, http.StatusCreated, map[string]string{"message": "registered successfully"})
 }
 
 // Login godoc
@@ -66,19 +63,25 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 // @Failure      401   {object}  map[string]string
 // @Router       /auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	httputil.LimitBody(r)
+
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	resp, err := h.service.Login(r.Context(), req)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, err.Error())
+		if err.Error() == "phone or password is incorrect" {
+			httputil.WriteError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+		httputil.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 // UpdateLocation godoc
@@ -94,30 +97,31 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure      401   {object}  map[string]string
 // @Router       /drivers/location [post]
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
+	httputil.LimitBody(r)
+
 	userID, ok := r.Context().Value(ContextKeyUserID).(uint)
 	if !ok {
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	var req UpdateLocationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	// Kiểm tra sơ bộ tọa độ có hợp lệ không
-	if req.Latitude < -90 || req.Latitude > 90 || req.Longitude < -180 || req.Longitude > 180 {
-		writeError(w, http.StatusBadRequest, "invalid coordinates")
+	if !httputil.ValidCoords(req.Latitude, req.Longitude) {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid coordinates")
 		return
 	}
 
 	if err := h.service.UpdateLocation(r.Context(), userID, req); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to update location")
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to update location")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"message": "location updated"})
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{"message": "location updated"})
 }
 
 // --- Middleware ---
@@ -129,20 +133,20 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			writeError(w, http.StatusUnauthorized, "missing authorization header")
+			httputil.WriteError(w, http.StatusUnauthorized, "missing authorization header")
 			return
 		}
 
 		// Format: "Bearer <token>"
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
-			writeError(w, http.StatusUnauthorized, "invalid authorization header format")
+			httputil.WriteError(w, http.StatusUnauthorized, "invalid authorization header format")
 			return
 		}
 
 		claims, err := h.service.ParseJWT(parts[1])
 		if err != nil {
-			writeError(w, http.StatusUnauthorized, "invalid or expired token")
+			httputil.WriteError(w, http.StatusUnauthorized, "invalid or expired token")
 			return
 		}
 

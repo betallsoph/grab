@@ -44,11 +44,15 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) error {
 		FullName:     req.FullName,
 	}
 
-	return s.repo.Create(ctx, u)
+	return fmt.Errorf("service.Register: %w", s.repo.Create(ctx, u))
 }
 
 // Login xác thực tài xế và trả về JWT nếu hợp lệ.
 func (s *Service) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
+	if req.Phone == "" || req.Password == "" {
+		return nil, errors.New("phone and password are required")
+	}
+
 	u, err := s.repo.FindByPhone(ctx, req.Phone)
 	if err != nil {
 		// Che giấu lý do cụ thể để tránh user enumeration attack

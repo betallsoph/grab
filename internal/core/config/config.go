@@ -21,7 +21,7 @@ func Load() *Config {
 		log.Println("[config] .env not found, using OS env")
 	}
 
-	return &Config{
+	cfg := &Config{
 		Port:        getEnv("PORT", "8080"),
 		PostgresDSN: getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/grab?sslmode=disable"),
 		MongoURI:    getEnv("MONGO_URI", "mongodb://localhost:27017"),
@@ -29,6 +29,15 @@ func Load() *Config {
 		RedisPass:   getEnv("REDIS_PASS", ""),
 		JWTSecret:   getEnv("JWT_SECRET", "super-secret-change-me"),
 	}
+
+	if cfg.PostgresDSN == "" {
+		log.Fatal("[config] POSTGRES_DSN is required")
+	}
+	if cfg.JWTSecret == "" || cfg.JWTSecret == "super-secret-change-me" {
+		log.Println("[config] WARNING: JWT_SECRET is empty or using the default value; set a strong secret in production")
+	}
+
+	return cfg
 }
 
 func getEnv(key, fallback string) string {
